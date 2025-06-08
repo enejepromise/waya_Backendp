@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from allauth.account import app_settings
+from users.models import EmailVerification
 
 User = get_user_model()
 
@@ -48,6 +49,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+
+        token = EmailVerification.objects.create(user=user)
+
         return user
 
 

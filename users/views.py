@@ -1,12 +1,33 @@
+import requests
+
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from rest_framework.permissions import AllowAny
-from django.utils.http import urlsafe_base64_decode
-from django.utils.encoding import force_str
-import requests
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.mail import send_mail
+from django.http import HttpResponseRedirect, JsonResponse
+#from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django.utils.encoding import force_str, force_bytes
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.contrib.sites.shortcuts import get_current_site
+
 from rest_framework import generics, status, permissions
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from dj_rest_auth.registration.views import SocialLoginView
+
+#from allauth.account.utils import perform_login
+#from allauth.socialaccount.adapter import get_adapter
+from allauth.socialaccount.helpers import complete_social_login
+# from allauth.socialaccount.models import SocialAccount
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+#from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+#from .models import SocialLoginAccount
+from users.models import EmailVerification
 from users.serializers import (
     UserRegistrationSerializer,
     UserLoginSerializer,
@@ -15,14 +36,6 @@ from users.serializers import (
     PasswordResetConfirmSerializer,
     EmailVerificationSerializer,
 )
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.http import JsonResponse
-from .signals import send_verification_email
-from django.contrib.auth import get_user_model
-from django.conf import settings
-
-from rest_framework.views import APIView
 
 User = get_user_model()
 
@@ -31,10 +44,35 @@ class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
 
-    def perform_create(self, serializer):
-        user = serializer.save()
-        send_verification_email(user)  # Ensure your signal handles async or errors gracefully
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            user.is_active = False  
+            user.save()
 
+            domain = getattr(settings, 'DOMAIN', None) or get_current_site(request).domain
+            uidb64 = urlsafe_base64_encode(force_bytes(str(user.id)))
+
+            email_verification = user.email_verifications.order_by('-created_at').first()
+            if email_verification:
+                token = email_verification.token
+                verification_link = f"https://{domain}{reverse('verify-email')}?uidb64={uidb64}&token={token}"
+
+                send_mail(
+                    subject="Verify Your Waya Account",
+                    message=f"Click the link to verify your email: {verification_link}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+
+            return Response(
+                {'message': 'Registration successful! Check your email to verify your account.'},
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserLoginView(generics.GenericAPIView):
     serializer_class = UserLoginSerializer
@@ -48,7 +86,8 @@ class UserLoginView(generics.GenericAPIView):
             email=serializer.validated_data['email'],
             password=serializer.validated_data['password']
         )
-        if user is not None:
+
+        if user:
             refresh = RefreshToken.for_user(user)
             return Response({
                 'id': str(user.id),
@@ -57,7 +96,8 @@ class UserLoginView(generics.GenericAPIView):
                 'avatar': user.avatar.url if user.avatar else None,
                 'token': str(refresh.access_token),
                 'refresh': str(refresh),
-            })
+            }, status=status.HTTP_200_OK)
+
         return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
@@ -76,7 +116,7 @@ class PasswordResetRequestView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(request=request)  # Ensure your serializer implements email sending
+        serializer.save(request=request)
         return Response({"message": "Password reset email sent if the email is registered."})
 
 
@@ -114,15 +154,18 @@ class EmailVerificationView(APIView):
         try:
             uid = force_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            verification = EmailVerification.objects.get(user=user, token=token, verified=False)
+        except (User.DoesNotExist, EmailVerification.DoesNotExist, ValueError, TypeError, OverflowError):
             return Response({"detail": "Invalid verification link."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if default_token_generator.check_token(user, token):
-            user.is_verified = True
-            user.save()
-            return Response({"message": "Email verified successfully."})
-        else:
-            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+        if verification.is_expired():
+            return Response({"detail": "Verification link has expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_verified = True
+        user.save()
+        verification.mark_as_verified()
+
+        return Response({"message": "Email verified successfully!"}, status=status.HTTP_200_OK)
 
 
 class ForgotPasswordView(generics.GenericAPIView):
@@ -132,7 +175,6 @@ class ForgotPasswordView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # Implement sending password reset email logic here if not handled in serializer.save()
         return Response({"detail": "Password reset email sent."})
 
 
@@ -141,7 +183,6 @@ class ResetPasswordConfirmView(generics.GenericAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        # Provide user context if possible, else None
         serializer = self.get_serializer(data=request.data, context={'user': None})
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -151,36 +192,90 @@ class ResetPasswordConfirmView(generics.GenericAPIView):
 def home(request):
     return JsonResponse({"message": "Welcome to the Waya Backend API"})
 
-User = get_user_model()
 
-class GoogleLoginView(APIView):
+class GoogleLoginView(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+
+    def post(self, request, *args, **kwargs):
+        access_token = request.data.get("access_token")
+        if not access_token:
+            return Response({"error": "Access token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        adapter = self.adapter_class()
+        app = adapter.get_provider().get_app(self.request)
+        token = adapter.parse_token({'access_token': access_token})
+        token.app = app
+
+        # Get Google user info using the access token
+        try:
+            login = adapter.complete_login(self.request, app, token, response=requests.Response())
+            login.token = token
+            login.state = SocialLoginView.serializer_class().validate(request.data)
+            login.lookup()
+        except Exception as e:
+            return Response({"error": "Failed to complete Google login."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get the Google email
+        google_email = login.account.extra_data.get("email")
+        if not google_email:
+            return Response({"error": "Unable to retrieve email from Google account"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Try to match to an existing local user
+            existing_user = User.objects.get(email=google_email)
+
+            if not existing_user.verified:
+                return Response({"error": "Account not verified."}, status=status.HTTP_403_FORBIDDEN)
+
+            if not existing_user.role:
+                # Redirect to select role if verified
+                login.user = existing_user
+                complete_social_login(self.request, login)
+                return HttpResponseRedirect(
+                    f"https://waya-fawn.vercel.app/user-role?user_id={existing_user.id}"
+                )
+
+            if existing_user.role != "parent":
+                return Response({"error": "Only parents are allowed to log in here."}, status=status.HTTP_403_FORBIDDEN)
+
+            # All good – proceed to login
+            login.user = existing_user
+            complete_social_login(self.request, login)
+            return Response({
+                "detail": "Login successful.",
+                "user_id": existing_user.id,
+                "email": existing_user.email
+            }, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            # No existing user → Google login not allowed for unregistered users
+            return Response({
+                "error": "This Google account is not registered as a parent. Please sign up through the registration flow."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        return super().post(request, *args, **kwargs)
+
+
+class ResendVerificationEmailView(APIView):
     def post(self, request):
-        id_token = request.data.get('id_token')
-        if not id_token:
-            return Response({'error': 'Missing ID token'}, status=status.HTTP_400_BAD_REQUEST)
+        email = request.data.get("email")
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Verify the ID token with Google
-        google_response = requests.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}")
-        if google_response.status_code != 200:
-            return Response({'error': 'Invalid ID token'}, status=status.HTTP_400_BAD_REQUEST)
+        if user.is_verified:
+            return Response({'message': 'Email already verified.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user_info = google_response.json()
-        email = user_info.get('email')
-        if not email:
-            return Response({'error': 'Google account has no email'}, status=status.HTTP_400_BAD_REQUEST)
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        verify_url = f"http://domain/api/auth/verify-email/{uid}/{token}/"
 
-        # Create user if doesn't exist
-        user, created = User.objects.get_or_create(email=email)
-        if created:
-            user.username = email.split('@')[0]
-            user.set_unusable_password()
-            user.save()
+        send_mail(
+            subject="Resend: Verify your Email",
+            message=f"Click the link to verify your account: {verify_url}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email]
+        )
 
-        # Create JWT tokens for the user
-        refresh = RefreshToken.for_user(user)
-
-        return Response({
-            'message': 'Login successful',
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-        }, status=status.HTTP_200_OK)
+        return Response({'message': 'Verification email resent!'}, status=status.HTTP_200_OK)
