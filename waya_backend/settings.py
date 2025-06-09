@@ -31,9 +31,9 @@ ENVIRONMENT = config("ENVIRONMENT", default="development")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost", cast = Csv())
+#ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,3f60-102-90-101-16.ngrok-free.app",  cast = Csv())
 
-
+ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",") + ['localhost', '127.0.0.1', '3f60-102-90-101-16.ngrok-free.app']
 # Google Auto Verification
 
 SITE_ID = 1
@@ -106,6 +106,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://waya-fawn.vercel.app",
+    "https://3f60-102-90-101-16.ngrok-free.app",
     
 ]
 
@@ -250,7 +251,9 @@ SOCIALACCOUNT_PROVIDERS = {
 
 
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Use Django's SMTP backend
+#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Use Django's SMTP backend
+EMAIL_BACKEND = 'users.backends.email_backend.EmailBackend'  # Use Django's SMTP backend
+
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
@@ -259,6 +262,8 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
 
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER) 
+
+DOMAIN = config('domain', default='http://localhost:3000')
 
 # FOR GOOGLE LOGIN
 AUTHENTICATION_BACKENDS = (

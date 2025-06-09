@@ -52,6 +52,8 @@ class UserRegistrationView(generics.CreateAPIView):
             user.save()
 
             domain = getattr(settings, 'DOMAIN', None) or get_current_site(request).domain
+            
+
             uidb64 = urlsafe_base64_encode(force_bytes(str(user.id)))
 
             email_verification = user.email_verifications.order_by('-created_at').first()
