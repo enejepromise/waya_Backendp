@@ -14,7 +14,14 @@ import os
 from pathlib import Path
 import dj_database_url
 from decouple import config, Csv
+#import certifi
+# import ssl
+# import urllib.request
 
+
+# ssl_context = ssl.create_default_context(cafile=certifi.where())
+# opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl_context))
+# urllib.request.install_opener(opener)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -251,17 +258,33 @@ SOCIALACCOUNT_PROVIDERS = {
 
 
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 #EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Use Django's SMTP backend
 EMAIL_BACKEND = 'users.backends.email_backend.EmailBackend'  # Use Django's SMTP backend
+
+
+EMAIL_HOST = 'smtp.googlemail.com'
+# EMAIL_HOST = 'smtp.sendgrid.net'
 
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-#EMAIL_USE_SSL = False  
+EMAIL_USE_SSL = False  
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')  
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
 
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER) 
+
+# EMAIL_HOST = 'smtp.sendgrid.net'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'apikey'  # This is literally the word "apikey"
+# EMAIL_HOST_PASSWORD = os.getenv('SENDGRID_API_KEY')  # Pull your API key from env
+
+# DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+# EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
+# SENDGRID_SANDBOX_MODE_IN_DEBUG = False
+# SENDGRID_API_KEY = config("SENDGRID_API_KEY")
 
 DOMAIN = config('domain', default='http://localhost:3000')
 

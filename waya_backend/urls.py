@@ -9,6 +9,8 @@ urlpatterns = [
         path('users/', include('users.urls')),
         path('children/', include('children.urls')),
         path('taskmaster/', include('taskmaster.urls')),
+        #path('api/familywallet/', include('wallet.urls')),
+       # path('api/insights/', include('insights.urls')),
     ])),
 
     # Redirect base URL to /api/
