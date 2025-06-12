@@ -259,11 +259,12 @@ SOCIALACCOUNT_PROVIDERS = {
 
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Use Django's SMTP backend
-EMAIL_BACKEND = 'users.backends.email_backend.EmailBackend'  # Use Django's SMTP backend
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Use Django's SMTP backend
+#EMAIL_BACKEND = 'users.backends.email_backend.EmailBackend'  # Use Django's SMTP backend
 
 
-EMAIL_HOST = 'smtp.googlemail.com'
+#EMAIL_HOST = 'smtp.googlemail.com'
 # EMAIL_HOST = 'smtp.sendgrid.net'
 
 EMAIL_HOST = 'smtp.gmail.com'

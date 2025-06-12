@@ -37,7 +37,6 @@ from users.serializers import (
 )
 
 User = get_user_model()
-
 class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
 
@@ -45,25 +44,30 @@ class UserRegistrationView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            user.is_active = False  
+            user.is_active = False
             user.save()
 
             domain = getattr(settings, 'DOMAIN', None) or get_current_site(request).domain
             uidb64 = urlsafe_base64_encode(force_bytes(str(user.id)))
             email_verification = user.email_verifications.order_by('-created_at').first()
-            
+
             if email_verification:
                 token = email_verification.token
                 verification_link = f"https://{domain}{reverse('verify-email')}?uidb64={uidb64}&token={token}"
 
-                # Django SMTP email sending
-                send_mail(
-                    subject="Verify Your Waya Account",
-                    message=f"Click the link to verify your email: {verification_link}",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False,
-                )
+                try:
+                    send_mail(
+                        subject="Verify Your Waya Account",
+                        message=f"Click the link to verify your email: {verification_link}",
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[user.email],
+                        fail_silently=False,
+                    )
+                except Exception as e:
+                    return Response(
+                        {"error": "User created but failed to send verification email.", "details": str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
 
             return Response(
                 {'message': 'Registration successful! Check your email to verify your account.'},
@@ -71,6 +75,7 @@ class UserRegistrationView(generics.CreateAPIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
