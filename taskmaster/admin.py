@@ -1,8 +1,6 @@
 from django.contrib import admin
-
-# Register your models here.
-from django.contrib import admin
 from .models import Task
+
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
@@ -10,31 +8,36 @@ class TaskAdmin(admin.ModelAdmin):
         'title',
         'assigned_to',
         'parent',
-        'status',
         'reward',
         'due_date',
+        'status',
         'created_at',
         'completed_at',
     )
-    list_filter = ('status', 'due_date', 'parent')
-    search_fields = ('title', 'assigned_to__username', 'parent__username')
+    list_filter = ('status', 'due_date', 'created_at')
+    search_fields = (
+        'title',
+        'description',
+        'assigned_to__username',
+        'parent__email',
+        'parent__full_name',
+    )
     readonly_fields = ('created_at', 'completed_at')
+    ordering = ('-created_at',)
 
     fieldsets = (
         (None, {
-            'fields': ('title', 'description', 'reward', 'due_date')
+            'fields': (
+                'title',
+                'description',
+                'reward',
+                'due_date',
+                'assigned_to',
+                'parent',
+                'status',
+            )
         }),
-        ('Assignment', {
-            'fields': ('assigned_to', 'parent')
-        }),
-        ('Status', {
-            'fields': ('status', 'created_at', 'completed_at')
+        ('Timestamps (Read Only)', {
+            'fields': ('created_at', 'completed_at'),
         }),
     )
-
-    def save_model(self, request, obj, form, change):
-        # Optional: if you want to set parent automatically for new tasks created by admin user
-        # Uncomment if needed
-        # if not change and not obj.parent:
-        #     obj.parent = request.user
-        super().save_model(request, obj, form, change)

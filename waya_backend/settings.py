@@ -59,10 +59,6 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_LOGIN_METHODS = {'email'}
 SOCIALACCOUNT_QUERY_EMAIL = True
 
-
-
-# Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -70,17 +66,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
+    'users.apps.UsersConfig',
+     'children',
+     'taskmaster',
+     'familywallet',
+     'insighttracker',
+     'settings_waya',
+'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework.authtoken',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'users.apps.UsersConfig',
-    'children',
-    'taskmaster',
-    'familywallet',
-    'insighttracker',
-    'settings_waya',
 
 
     'django.contrib.sites',  # Required for allauth(Google auto login)
@@ -92,6 +88,44 @@ INSTALLED_APPS = [
     'dj_rest_auth.registration',
 
 ]
+
+
+
+# Application definition
+
+# INSTALLED_APPS = [
+#     'django.contrib.admin',
+#     'django.contrib.auth',
+#     'django.contrib.contenttypes',
+#     'django.contrib.sessions',
+#     'django.contrib.messages',
+#     'django.contrib.staticfiles',
+#     'rest_framework',
+#     'rest_framework_simplejwt',
+#     'rest_framework.authtoken',
+#     'rest_framework_simplejwt.token_blacklist',
+#     'corsheaders',
+#     'users.apps.UsersConfig',
+#     'children',
+#     'taskmaster',
+#     'familywallet',
+#     'insighttracker',
+#     'settings_waya',
+
+# 'django.contrib.sites',
+#     'django.contrib.auth',           # Required for authentication
+#     'django.contrib.contenttypes',   # Should come before third-party apps
+#     'django.contrib.sessions',       # Required for sessions
+#     # 'django.contrib.admin',        # Uncomment if admin is needed
+#     # Third-party apps
+#     'allauth',
+#     'allauth.account',
+#     'allauth.socialaccount',
+#     'allauth.socialaccount.providers.google',
+#     'dj_rest_auth',
+#     'dj_rest_auth.registration',
+#     # ... any other apps ...
+# ]
 
 ACCOUNT_ADAPTER = 'users.adapter.WayaAccountAdapter'
 
@@ -261,31 +295,31 @@ SOCIALACCOUNT_PROVIDERS = {
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Use Django's SMTP backend
-#EMAIL_BACKEND = 'users.backends.email_backend.EmailBackend'  # Use Django's SMTP backend
+# #EMAIL_BACKEND = 'users.backends.email_backend.EmailBackend'  # Use Django's SMTP backend
 
 
-#EMAIL_HOST = 'smtp.googlemail.com'
-# EMAIL_HOST = 'smtp.sendgrid.net'
+# #EMAIL_HOST = 'smtp.googlemail.com'
+# # EMAIL_HOST = 'smtp.sendgrid.net'
 
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False  
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')  
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
-
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER) 
-
-# EMAIL_HOST = 'smtp.sendgrid.net'
+# EMAIL_HOST = 'smtp.gmail.com'
 # EMAIL_PORT = 587
 # EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'apikey'  # This is literally the word "apikey"
-# EMAIL_HOST_PASSWORD = os.getenv('SENDGRID_API_KEY')  # Pull your API key from env
+# EMAIL_USE_SSL = False  
+# EMAIL_HOST_USER = config('EMAIL_HOST_USER')  
+# EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
 
-# DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
-# EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
-# SENDGRID_SANDBOX_MODE_IN_DEBUG = False
-# SENDGRID_API_KEY = config("SENDGRID_API_KEY")
+# DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER) 
+
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'apikey'  # This is literally the word "apikey"
+EMAIL_HOST_PASSWORD = os.getenv('SENDGRID_API_KEY')  # Pull your API key from env
+
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
+SENDGRID_API_KEY = config("SENDGRID_API_KEY")
 
 DOMAIN = config('domain', default='http://localhost:3000')
 
@@ -304,8 +338,5 @@ LOGOUT_REDIRECT_URL = ''
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
-
-# CELERY BEAT
-INSTALLED_APPS += ['django_celery_beat']
 
 

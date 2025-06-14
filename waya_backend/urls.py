@@ -9,9 +9,10 @@ urlpatterns = [
         path('users/', include('users.urls')),
         path('children/', include('children.urls')),
         path('taskmaster/', include('taskmaster.urls')),
-        #path('api/familywallet/', include('wallet.urls')),
-       # path('api/insights/', include('insights.urls')),
-    ])),
+        path('familywallet/', include('familywallet.urls')),
+        path('insighttracker/', include('insighttracker.urls')),
+        path('settings_waya/', include('settings_waya.urls')),
+ ])),
 
     # Redirect base URL to /api/
     path('', RedirectView.as_view(url='/api/', permanent=False)),

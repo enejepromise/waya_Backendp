@@ -1,10 +1,25 @@
-# from rest_framework import serializers
-# from .models import InsightTracker
+from rest_framework import serializers
 
-# class InsightTrackerSerializer(serializers.ModelSerializer):
-#     child_username = serializers.CharField(source='child.username', read_only=True)
 
-#     class Meta:
-#         model = InsightTracker
-#         fields = ['id', 'child', 'child_username', 'activity_type', 'description', 'value', 'created_at']
-#         read_only_fields = ['id', 'created_at']
+class ActivitySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    activity_type = serializers.CharField()
+    description = serializers.CharField()
+    child_name = serializers.CharField(allow_null=True)
+    points = serializers.IntegerField()
+    timestamp = serializers.DateTimeField()
+
+
+class DashboardStatsSerializer(serializers.Serializer):
+    total_chores = serializers.IntegerField()
+    completed_chores = serializers.IntegerField()
+    pending_chores = serializers.IntegerField()
+    activities = ActivitySerializer(many=True)
+    individual_activities = serializers.DictField(
+        child=ActivitySerializer(many=True)
+    )
+    daily_summary = serializers.DictField(
+        child=serializers.DictField(
+            child=serializers.IntegerField()
+        )
+    )

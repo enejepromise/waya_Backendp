@@ -1,8 +1,12 @@
-# from django.urls import path
-# from .views import WalletDetailView, WalletDepositView, WalletWithdrawView
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import FamilyWalletViewSet, ChildWalletViewSet, TransactionViewSet
 
-# urlpatterns = [
-#     path('<uuid:child_id>/', WalletDetailView.as_view(), name='wallet-detail'),
-#     path('<uuid:child_id>/deposit/', WalletDepositView.as_view(), name='wallet-deposit'),
-#     path('<uuid:child_id>/withdraw/', WalletWithdrawView.as_view(), name='wallet-withdraw'),
-# ]
+router = DefaultRouter()
+router.register(r'family-wallet', FamilyWalletViewSet, basename='family-wallet')
+router.register(r'child-wallets', ChildWalletViewSet, basename='child-wallets')
+router.register(r'transactions', TransactionViewSet, basename='transactions')
+
+urlpatterns = [
+    path('', include(router.urls)),
+]

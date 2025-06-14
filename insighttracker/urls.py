@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import InsightListCreateView
+from .views import DashboardView
 
 urlpatterns = [
-    path('', InsightListCreateView.as_view(), name='insight-list-create'),
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
 ]

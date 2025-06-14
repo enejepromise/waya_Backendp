@@ -47,8 +47,7 @@ class TaskStatusUpdateView(generics.UpdateAPIView):
 
     def get_object(self):
         task = super().get_object()
-        # Here you would verify the child is the one updating the status
-        # For now, assuming only parents access backend API
+       
         return task
 
     def patch(self, request, *args, **kwargs):

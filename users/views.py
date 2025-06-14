@@ -7,6 +7,7 @@ from django.core.mail import send_mail
 from django.http import HttpResponseRedirect, JsonResponse
 #from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from .utils import send_email
 from django.utils.encoding import force_str, force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.sites.shortcuts import get_current_site
@@ -19,7 +20,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from dj_rest_auth.registration.views import SocialLoginView
 
-#from allauth.account.utils import perform_login
 #from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.helpers import complete_social_login
 # from allauth.socialaccount.models import SocialAccount
@@ -37,6 +37,7 @@ from users.serializers import (
 )
 
 User = get_user_model()
+
 class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
 
@@ -56,13 +57,22 @@ class UserRegistrationView(generics.CreateAPIView):
                 verification_link = f"https://{domain}{reverse('verify-email')}?uidb64={uidb64}&token={token}"
 
                 try:
-                    send_mail(
+                    # Django's SMTP email system (commented out)
+                    # send_mail(
+                    #     subject="Verify Your Waya Account",
+                    #     message=f"Click the link to verify your email: {verification_link}",
+                    #     from_email=settings.DEFAULT_FROM_EMAIL,
+                    #     recipient_list=[user.email],
+                    #     fail_silently=False,
+                    # )
+
+                    # ✅ SendGrid implementation
+                    send_email(
                         subject="Verify Your Waya Account",
                         message=f"Click the link to verify your email: {verification_link}",
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[user.email],
-                        fail_silently=False,
+                        to_email=user.email
                     )
+
                 except Exception as e:
                     return Response(
                         {"error": "User created but failed to send verification email.", "details": str(e)},
@@ -75,49 +85,6 @@ class UserRegistrationView(generics.CreateAPIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-# class UserRegistrationView(generics.CreateAPIView):
-#     serializer_class = UserRegistrationSerializer
-#     def create(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         if serializer.is_valid():
-#             user = serializer.save()
-#             user.is_active = False  
-#             user.save()
-
-#             domain = getattr(settings, 'DOMAIN', None) or get_current_site(request).domain
-#             uidb64 = urlsafe_base64_encode(force_bytes(str(user.id)))
-#             email_verification = user.email_verifications.order_by('-created_at').first()
-            
-#             if email_verification:
-#                 token = email_verification.token
-#                 verification_link = f"https://{domain}{reverse('verify-email')}?uidb64={uidb64}&token={token}"
-
-#                 # Old Django email method (commented out)
-#                 # send_mail(
-#                 #     subject="Verify Your Waya Account",
-#                 #     message=f"Click the link to verify your email: {verification_link}",
-#                 #     from_email=settings.DEFAULT_FROM_EMAIL,
-#                 #     recipient_list=[user.email],
-#                 #     fail_silently=False,
-#                 # )
-
-#                 # SendGrid implementation
-#                 # send_email(
-#                 #     subject="Verify Your Waya Account",
-#                 #     message=f"Click the link to verify your email: {verification_link}",
-#                 #     to_email=user.email
-#                 # )
-
-#             return Response(
-#                 {'message': 'Registration successful! Check your email to verify your account.'},
-#                 status=status.HTTP_201_CREATED
-#             )
-
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class UserLoginView(generics.GenericAPIView):
     serializer_class = UserLoginSerializer
     permission_classes = [AllowAny]
@@ -315,19 +282,11 @@ class ResendVerificationEmailView(APIView):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         verify_url = f"http://domain/api/auth/verify-email/{uid}/{token}/"
 
-        #smtp implementation
         send_mail(
             subject="Resend: Verify your Email",
             message=f"Click the link to verify your account: {verify_url}",
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email]
         )
-
-        # ✅ SendGrid implementation
-        # send_email(
-        #     subject="Resend: Verify your Email",
-        #     message=f"Click the link to verify your account: {verify_url}",
-        #     to_email=user.email
-        # )
 
         return Response({'message': 'Verification email resent!'}, status=status.HTTP_200_OK)

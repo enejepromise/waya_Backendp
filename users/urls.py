@@ -10,6 +10,7 @@ from .views import (
     ResetPasswordConfirmView,
     GoogleLoginView,
     home,
+    ResendVerificationEmailView,
 )
 
 urlpatterns = [
@@ -22,6 +23,6 @@ urlpatterns = [
     path('forgot-password/', ForgotPasswordView.as_view(), name='forgot-password'),
     path('reset-password-confirm/', ResetPasswordConfirmView.as_view(), name='reset-password-confirm'),
     path('', home, name='home'),
-    path('social-login/google/', GoogleLoginView.as_view(), name='google-login'),  # <-- NEW
-
+    path('social-login/google/', GoogleLoginView.as_view(), name='google-login'), 
+    path('resend-email/', ResendVerificationEmailView.as_view(), name='resend-verification-email'),
 ]
